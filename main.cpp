@@ -1,97 +1,83 @@
 #include "headers.hpp"
+#include <boost/flyweight.hpp>
+#include <boost/bimap.hpp>
 
-using std::cout;
-using std::endl;
+using namespace boost;
 
-/* Singleton Design Pattern
-For some components of the system, it really makes sense to only have one instance
-eg - Database Repository
-eg - object Factory
-Situations where the constructor call is expensive
-Provide all the consumers with an API to the one and only object created
-Also, need to maintain thread-safety of access
-*/
+// Flyweight design pattern
+// Space optimization
+// Avoid redundancy when storing data
+// list of names, and pointers/references/indices to the common names
+// Storing common data externally and then refer to them as needed
 
-class SingletonDatabase{
+// e.g. MMORG
 
-private:
-    SingletonDatabase(){
-        cout << "Initializing the database" << endl;
-        std::ifstream ifs("Capitals.txt");
-        std::string s, s2;
+typedef uint32_t key;
 
-       while(getline(ifs, s)){
-           getline(ifs, s2);
-           capitals.insert(std::make_pair(s, std::stoi(s2)));
-       }
-
-    }
-    std::map<std::string, int> capitals;
+struct User
+{
     
-public:
+    User(const std::string& first_name, const std::string& last_name):
+           first_name{add(first_name)}, last_name{add(last_name)} {}
 
-    // deleting the copy constructor and copy assignment to avoid replication
-    SingletonDatabase(const SingletonDatabase& rhs) = delete;
-    SingletonDatabase& operator=(const SingletonDatabase& rhs) = delete;
-
-    // return a static instance of the Singleton
-    // the method is static because the constructor of the class in private
-    // as the constructor is private, we cannot instantiate the class object
-    // therefore, we need to access the method WITHOUT an object
-    // the body of the methos has static member, since the static object
-    // implies that there is onlt a one-time instatiation of the class object
-    // we return a reference of the static object because returning a copy
-    // will error out since copy constructor and assignment are deleted, 
-    // also, copy will defeat the purpose of SINGLETON
-    static SingletonDatabase& get(){
-        static SingletonDatabase db;
-        return db;
+    const std::string& get_first_name(void) const {
+        return names.left.find(first_name)->second;
     }
 
-    int get_population(const std::string& city){
-        if(capitals.find(city)!=capitals.end()){
-            return capitals[city];
-        } else
+    const std::string& get_last_name(void) const {
+        return names.right.find(last_name)->first;
+    }
+
+    friend std::ostream& operator<<(std::ostream& out, const User& user){
+        out << "first_name: " << user.get_first_name() << " last_name: " 
+                            << user.get_last_name() << endl;
+        return out;
+    }
+
+    protected:
+    key first_name, last_name; // uint32_t
+    static bimap<key, std::string> names;
+    static key seed;
+
+    static key add(const std::string& s){
+        auto it = names.right.find(s); 
+        if(it != names.right.end()){
+            return it->second;
+        }
+        else
         {
-            cout << "Entry does not exist in the database" << endl;
-            return 0;
+            key id = ++seed;
+            names.insert({seed,s});
+            return id;
         }
-        
     }
+};
+
+// building a raw caching mechanism for the names
+key User::seed{0};
+bimap<key, std::string> User::names{};
+
+// boost flyweight
+struct User2{
+    flyweight<std::string> first_name, last_name;
+
+    // constructor
+    User2(const std::string& first_name, const std::string& last_name):
+                first_name(first_name),
+                last_name(last_name){}
+
 
 };
 
-struct SingletonRecordFinder{
 
-    int total_population(const std::vector<std::string>& names){
-        int result{0};
-        for(auto& name: names){
-            result += SingletonDatabase::get().get_population(name);
-        }
 
-        return result;
-    }
+int main() {
 
-};
+    User u1{"Purva", "Kulkarni"};
+    User u2{"Manali", "Kulkarni"};
 
-TEST(RecordFinderTest, SingletonRecordPopulationTest){
-    SingletonRecordFinder srf;
-    std::vector<std::string> names{"Mumbai", "Delhi"};
-    int tp = srf.total_population(names);
-    EXPECT_EQ(1200, tp);
-
-}
-
-int main(int ac, char* av[]) {
-
-    // int population = SingletonDatabase::get().get_population("Mumbai");
-    if (int population = SingletonDatabase::get().get_population("Hyderabad"))
-    {
-        cout << "Population : " << population << endl;
-    }
-
-    testing::InitGoogleTest(&ac, av);
-    return RUN_ALL_TESTS();
-
+    User2 u3{"Shreehari", "Kulkarni"};
+    User2 u4{"Madhavi", "Kulkarni"};
     return 0;
+
 }
