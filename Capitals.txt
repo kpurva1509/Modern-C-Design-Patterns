@@ -1,0 +1,8 @@
+Mumbai
+1000
+Delhi
+200
+Bangalore
+670
+Kolkata
+349
