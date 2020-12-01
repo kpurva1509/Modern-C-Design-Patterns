@@ -1,0 +1,51 @@
+#include <iostream>
+#include <vector>
+#include <functional>
+#include <algorithm>
+#include <variant>
+#include <map>
+#include <cstdio>
+#include <cmath>
+#include <numeric>
+#include <sstream>
+#include <fstream>
+#include <string>
+#include <type_traits>
+
+using std::cout;
+using std::endl;
+
+struct AddressPrinter{
+  void operator()(const std::string& houseName){
+    cout << "A house named " << houseName << endl;
+  }
+
+  void operator()(const int& houseNumber){
+    cout << "A house numbered " << houseNumber << endl;
+  }
+
+};
+
+int main() {
+
+  std::variant<std::string, int> visitables;
+  visitables = 908;
+
+  // Using functor
+  // AddressPrinter ap;
+  // std::visit(ap, visitables); // OR...
+  // std::visit(AddressPrinter(), visitables);
+
+  std::visit([](auto& args){
+    using T = std::decay_t<decltype(args)>;
+
+    // if constexpr (std::is_same)
+    if constexpr (std::is_same_v<T, std::string>){
+      cout << "A house named " << args << endl;
+    } else {
+      cout << "A house numbered " << args << endl;
+    }
+  }, visitables);
+
+  return 0;
+}
